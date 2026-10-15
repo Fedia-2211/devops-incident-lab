@@ -1,0 +1,10 @@
+Priority: P2
+Reported by: Monitoring alert, 11:00
+
+ALERT: CPU on web at 100% for 15 minutes. Pages are slow.
+The previous engineer killed 'the busy process' twice, and both
+times the CPU was back at 100% about a minute later.
+Find out what it is, remove it completely, and explain how it
+keeps coming back.
+
+Server: web

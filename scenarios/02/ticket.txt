@@ -1,0 +1,11 @@
+Priority: P2
+Reported by: Monitoring alert, 03:40
+
+ALERT: filesystem /var/log/shop is 100% full on web.
+The on-call engineer before you ran `du -sh /var/log/shop/*`
+and found almost nothing there, so they went back to sleep.
+Order logs cannot be written. Free the space and stop it from
+happening again. Do NOT just delete the shop-logger service;
+the business needs it.
+
+Server: web

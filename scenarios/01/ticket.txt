@@ -1,0 +1,9 @@
+Priority: P1 (customer facing)
+Reported by: Support team, 09:12
+
+"Customers opening the shop get a weird page that lists files
+instead of our normal 'Shop is online' page. Nobody deployed
+anything today. Please restore the website."
+
+Server: web (192.168.56.10)
+From your laptop: http://localhost:8080

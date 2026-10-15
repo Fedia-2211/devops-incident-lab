@@ -1,0 +1,8 @@
+Priority: P1
+Reported by: Marketing, 16:20
+
+"After the intern 'secured the server', every customer gets
+403 Forbidden. Fix it, but keep the server secure: do not make
+anything world-writable."
+
+Server: web.  Requires scenario 1 to be fixed first.

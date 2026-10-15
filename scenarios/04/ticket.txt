@@ -1,0 +1,9 @@
+Priority: P3
+Reported by: Security team, 10:30
+
+"We need to patch web today, but apt fails:
+  Temporary failure resolving 'archive.ubuntu.com'
+A colleague 'fixed' it last week by editing a file and now it is
+broken again. Fix it properly so it does not break after reboot."
+
+Server: web

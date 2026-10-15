@@ -1,0 +1,10 @@
+Priority: P1
+Reported by: Backend developers, 14:05
+
+"Since the DB maintenance window this morning, the app on web
+cannot connect to the database. Error from the app:
+  ERROR 2002 (HY000): Can't connect to server on 'db' (115)
+The DB team says MariaDB is running fine. Please fix."
+
+Test from web:  mysql -h db -u app -papppass -e 'SELECT * FROM appdb.orders'
+Break runs on: db.   Check runs on: web.

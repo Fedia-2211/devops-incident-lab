@@ -1,0 +1,3 @@
+TITLE=App cannot connect to the database
+BREAK_VM=db
+CHECK_VM=web

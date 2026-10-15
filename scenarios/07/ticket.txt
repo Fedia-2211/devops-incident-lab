@@ -1,0 +1,9 @@
+Priority: P2
+Reported by: Developer, 18:45
+
+"I deployed our new orders-api service on web. systemctl says it
+is 'activating (auto-restart)' forever. It should answer on
+http://localhost:8081 with {"status": "ok"}. Example config is
+in /etc/orders-api/. I'm going home, please make it work."
+
+Server: web

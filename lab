@@ -1,0 +1,122 @@
+#!/usr/bin/env bash
+# lab - break/fix incident trainer.
+# Scenario scripts are base64-encoded so you are not spoiled by accident.
+# Reading them is cheating only yourself.
+set -uo pipefail
+
+LAB_DIR="${LAB_DIR:-$(cd "$(dirname "$(readlink -f "$0")")" && pwd)}"
+SCEN_DIR="$LAB_DIR/scenarios"
+STATE_DIR="/var/lib/lab"
+
+c_red=$'\e[31m'; c_grn=$'\e[32m'; c_yel=$'\e[33m'; c_bld=$'\e[1m'; c_off=$'\e[0m'
+
+die()  { echo "${c_red}error:${c_off} $*" >&2; exit 1; }
+need_root() { [[ $EUID -eq 0 ]] || die "run with sudo: sudo lab $*"; }
+
+scen_path() {
+  local n; n=$(printf "%02d" "$((10#${1:-0}))" 2>/dev/null) || die "bad scenario number"
+  [[ -d "$SCEN_DIR/$n" ]] || die "no scenario $1 (try: lab list)"
+  echo "$SCEN_DIR/$n"
+}
+
+meta() { tr -d '\r' < "$1/meta" | grep "^$2=" | cut -d= -f2-; }
+dec()  { tr -d '\r\n' < "$1" | base64 -d; }
+
+on_vm() {
+  local want="$1"
+  if [[ "$(hostname)" != "$want" ]]; then
+    die "this step runs on the ${c_bld}$want${c_off} VM. From your laptop: vagrant ssh $want"
+  fi
+}
+
+run_b64() { dec "$1" | bash; }
+
+cmd_list() {
+  printf "%-4s %-6s %s\n" "#" "VM" "TICKET"
+  for d in "$SCEN_DIR"/*/; do
+    local n; n=$(basename "$d")
+    local status=""
+    [[ -f "$STATE_DIR/$n.solved" ]] && status=" ${c_grn}(solved)${c_off}"
+    [[ -f "$STATE_DIR/$n.start" && ! -f "$STATE_DIR/$n.solved" ]] && status=" ${c_yel}(open)${c_off}"
+    printf "%-4s %-6s %s%s\n" "$((10#$n))" "$(meta "$d" BREAK_VM)" "$(meta "$d" TITLE)" "$status"
+  done
+}
+
+cmd_ticket() {
+  local d; d=$(scen_path "$1")
+  echo
+  echo "${c_bld}=== INCIDENT TICKET #$(basename "$d") ===${c_off}"
+  tr -d "\r" < "$d/ticket.txt"
+  echo
+}
+
+cmd_break() {
+  need_root "break $1"
+  local d n; d=$(scen_path "$1"); n=$(basename "$d")
+  on_vm "$(meta "$d" BREAK_VM)"
+  echo "Injecting incident... (this can take up to a minute)"
+  run_b64 "$d/break.b64" >/dev/null 2>&1
+  mkdir -p "$STATE_DIR"
+  date +%s > "$STATE_DIR/$n.start"
+  rm -f "$STATE_DIR/$n.solved"
+  cmd_ticket "$1"
+  echo "Clock is running. When you think it is fixed: sudo lab check $((10#$n))"
+}
+
+cmd_check() {
+  need_root "check $1"
+  local d n; d=$(scen_path "$1"); n=$(basename "$d")
+  on_vm "$(meta "$d" CHECK_VM)"
+  local out
+  if out=$(run_b64 "$d/check.b64" 2>&1); then
+    echo "${c_grn}${c_bld}RESOLVED${c_off} $out"
+    mkdir -p "$STATE_DIR"
+    if [[ -f "$STATE_DIR/$n.start" ]]; then
+      local mins=$(( ( $(date +%s) - $(cat "$STATE_DIR/$n.start") ) / 60 ))
+      echo "Time to resolve: ${mins} min"
+    fi
+    touch "$STATE_DIR/$n.solved"
+    echo "Now write postmortems/$n.md from postmortems/TEMPLATE.md before moving on."
+  else
+    echo "${c_red}${c_bld}NOT RESOLVED${c_off}"
+    echo "$out"
+    exit 1
+  fi
+}
+
+cmd_hint() {
+  local d level="${2:-1}"; d=$(scen_path "$1")
+  [[ "$level" == 1 || "$level" == 2 ]] || die "hint level is 1 or 2"
+  [[ "$level" == 2 ]] && echo "${c_yel}(level 2 is a strong hint)${c_off}"
+  dec "$d/hint$level.b64"; echo
+}
+
+cmd_solution() {
+  local d; d=$(scen_path "$1")
+  read -r -p "Show the full solution? Try 'lab hint $1 2' first. Type yes: " ans
+  [[ "$ans" == "yes" ]] || exit 0
+  dec "$d/solution.b64"; echo
+}
+
+usage() {
+  cat <<EOF
+${c_bld}lab${c_off} - incident trainer
+
+  lab list                 show scenarios and status
+  sudo lab break N         inject incident N and print its ticket
+  lab ticket N             show the ticket again
+  sudo lab check N         verify your fix
+  lab hint N [1|2]         hint (level 2 is stronger)
+  lab solution N           full walkthrough (last resort)
+EOF
+}
+
+case "${1:-}" in
+  list)     cmd_list ;;
+  ticket)   cmd_ticket "${2:-}" ;;
+  break)    cmd_break "${2:-}" ;;
+  check)    cmd_check "${2:-}" ;;
+  hint)     cmd_hint "${2:-}" "${3:-1}" ;;
+  solution) cmd_solution "${2:-}" ;;
+  *)        usage ;;
+esac
